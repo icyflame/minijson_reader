@@ -905,7 +905,10 @@ struct parse_object_single_field_handler : check_on_destroy_handler
 
     ~parse_object_single_field_handler()
     {
-        if (check_on_destroy) EXPECT_TRUE(read_field);
+        if (check_on_destroy)
+        {
+            EXPECT_TRUE(read_field);
+        }
     }
 
     void operator()(const char* field_name, const minijson::value& field_value)
@@ -932,7 +935,10 @@ struct parse_object_multiple_fields_handler : check_on_destroy_handler
 
     ~parse_object_multiple_fields_handler()
     {
-        if (check_on_destroy) EXPECT_TRUE(h.all());
+        if (check_on_destroy)
+        {
+            EXPECT_TRUE(h.all());
+        }
     }
 
     void operator()(const char* n, const minijson::value& v)
@@ -991,7 +997,10 @@ struct parse_object_nested_handler : check_on_destroy_handler
 
     ~parse_object_nested_handler()
     {
-        if (check_on_destroy) EXPECT_TRUE(h.all());
+        if (check_on_destroy)
+        {
+            EXPECT_TRUE(h.all());
+        }
     }
 
     void operator()(const char* n, const minijson::value& v)
@@ -1017,7 +1026,10 @@ struct parse_object_nested_handler : check_on_destroy_handler
 
         ~nested1_handler()
         {
-            if (check_on_destroy) EXPECT_TRUE(read_field);
+            if (check_on_destroy)
+            {
+                EXPECT_TRUE(read_field);
+            }
         }
 
         void operator()(const char* n, const minijson::value& v)
@@ -1040,7 +1052,10 @@ struct parse_object_nested_handler : check_on_destroy_handler
 
             ~nested2_handler()
             {
-                if (check_on_destroy) EXPECT_TRUE(h.all());
+                if (check_on_destroy)
+                {
+                    EXPECT_TRUE(h.all());
+                }
             }
 
             void operator()(const char* n, const minijson::value& v)
@@ -1095,7 +1110,10 @@ struct parse_array_single_elem_handler : check_on_destroy_handler
 
     ~parse_array_single_elem_handler()
     {
-        if (check_on_destroy) EXPECT_TRUE(read_elem);
+        if (check_on_destroy)
+        {
+            EXPECT_TRUE(read_elem);
+        }
     }
 
     void operator()(const minijson::value& elem_value)
@@ -1126,7 +1144,10 @@ struct parse_array_single_elem2_handler : check_on_destroy_handler
 
     ~parse_array_single_elem2_handler()
     {
-        if (check_on_destroy) EXPECT_TRUE(read_elem);
+        if (check_on_destroy)
+        {
+            EXPECT_TRUE(read_elem);
+        }
     }
 
     void operator()(const minijson::value& elem_value)
@@ -1158,7 +1179,10 @@ struct parse_array_multiple_elems_handler : check_on_destroy_handler
 
     ~parse_array_multiple_elems_handler()
     {
-        if (check_on_destroy) EXPECT_EQ(7U, counter);
+        if (check_on_destroy)
+        {
+            EXPECT_EQ(7U, counter);
+        }
     }
 
     void operator()(const minijson::value& v)
@@ -1211,7 +1235,10 @@ struct parse_array_nested_handler : check_on_destroy_handler
 
     ~parse_array_nested_handler()
     {
-        if (check_on_destroy) EXPECT_EQ(2U, counter);
+        if (check_on_destroy)
+        {
+            EXPECT_EQ(2U, counter);
+        }
     }
 
     void operator()(const minijson::value& v)
@@ -1237,7 +1264,10 @@ struct parse_array_nested_handler : check_on_destroy_handler
 
         ~nested1_handler()
         {
-            if (check_on_destroy) EXPECT_TRUE(read_elem);
+            if (check_on_destroy)
+            {
+                EXPECT_TRUE(read_elem);
+            }
         }
 
         void operator()(const minijson::value& v)
@@ -1260,7 +1290,10 @@ struct parse_array_nested_handler : check_on_destroy_handler
 
             ~nested2_handler()
             {
-                if (check_on_destroy) EXPECT_EQ(2U, counter);
+                if (check_on_destroy)
+                {
+                    EXPECT_EQ(2U, counter);
+                }
             }
 
             void operator()(const minijson::value& v)
