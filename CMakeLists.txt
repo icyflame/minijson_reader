@@ -27,8 +27,6 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     else()
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++03")
-        find_package(Boost 1.55 REQUIRED)
-        include_directories(${Boost_INCLUDE_DIRS})
     endif()
 endif()
 
