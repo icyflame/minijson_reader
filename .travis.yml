@@ -10,6 +10,12 @@ env:
   - CXX="g++-4.9" CPP11="-DCPP11:int=1"
   - CXX="g++-5"
   - CXX="g++-5" CPP11="-DCPP11:int=1"
+  - CXX="g++-6"
+  - CXX="g++-6" CPP11="-DCPP11:int=1"
+  - CXX="g++-7"
+  - CXX="g++-7" CPP11="-DCPP11:int=1"
+  - CXX="g++-8"
+  - CXX="g++-8" CPP11="-DCPP11:int=1"
   - CXX="clang++-3.6"
   - CXX="clang++-3.6" CPP11="-DCPP11:int=1"
 
@@ -19,11 +25,13 @@ addons:
       - ubuntu-toolchain-r-test
       - llvm-toolchain-precise-3.6
     packages:
-      - g++-4.6
       - g++-4.7
       - g++-4.8
       - g++-4.9
       - g++-5
+      - g++-6
+      - g++-7
+      - g++-8
       - clang-3.6
 
 before_install:
