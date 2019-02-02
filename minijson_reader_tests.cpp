@@ -1384,7 +1384,7 @@ TEST(minijson_reader, parse_object_truncated)
         {
             minijson::parse_object(const_buffer_context, parse_dummy());
         }
-        catch (parse_error e)
+        catch (const parse_error& e)
         {
             exception_thrown = true;
 
@@ -1448,7 +1448,7 @@ TEST(minijson_reader, parse_array_truncated)
         {
             minijson::parse_array(const_buffer_context, parse_dummy());
         }
-        catch (parse_error e)
+        catch (const parse_error& e)
         {
             exception_thrown = true;
 
@@ -1488,7 +1488,7 @@ void parse_object_invalid_helper(const char (&buffer)[Length], minijson::parse_e
     {
         minijson::parse_object(const_buffer_context, parse_dummy());
     }
-    catch (minijson::parse_error e)
+    catch (const minijson::parse_error& e)
     {
         exception_thrown = true;
         ASSERT_EQ(expected_reason, e.reason());
@@ -1512,7 +1512,7 @@ void parse_object_invalid_helper2(const char (&buffer)[Length], minijson::parse_
     {
         minijson::parse_object(const_buffer_context, parse_dummy_consume<minijson::const_buffer_context>(const_buffer_context));
     }
-    catch (minijson::parse_error e)
+    catch (const minijson::parse_error& e)
     {
         exception_thrown = true;
         ASSERT_EQ(expected_reason, e.reason());
@@ -1536,7 +1536,7 @@ void parse_array_invalid_helper(const char (&buffer)[Length], minijson::parse_er
     {
         minijson::parse_array(const_buffer_context, parse_dummy());
     }
-    catch (minijson::parse_error e)
+    catch (const minijson::parse_error& e)
     {
         exception_thrown = true;
         ASSERT_EQ(expected_reason, e.reason());
@@ -1560,7 +1560,7 @@ void parse_array_invalid_helper2(const char (&buffer)[Length], minijson::parse_e
     {
         minijson::parse_array(const_buffer_context, parse_dummy_consume<minijson::const_buffer_context>(const_buffer_context));
     }
-    catch (minijson::parse_error e)
+    catch (const minijson::parse_error& e)
     {
         exception_thrown = true;
         ASSERT_EQ(expected_reason, e.reason());
