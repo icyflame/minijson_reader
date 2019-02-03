@@ -80,7 +80,7 @@ public:
     {
     }
 
-    char nested_status() const
+    context_nested_status nested_status() const
     {
         return m_nested_status;
     }
