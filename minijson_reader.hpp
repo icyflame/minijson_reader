@@ -41,6 +41,23 @@ namespace minijson
 namespace detail
 {
 
+#if MJR_CPP11_SUPPORTED
+
+class noncopyable
+{
+public:
+
+    noncopyable() = default;
+
+    // C++11 idiom to prevent copy/move construction/assignment
+    noncopyable(const noncopyable&) = delete;
+    noncopyable& operator=(const noncopyable&) = delete;
+    noncopyable(noncopyable&&) = delete;
+    noncopyable& operator=(noncopyable&&) = delete;
+}; // class noncopyable
+
+#else // MJR_CPP11_SUPPORTED
+
 class noncopyable
 {
 private:
@@ -55,6 +72,8 @@ public:
     {
     }
 }; // class noncopyable
+
+#endif // MJR_CPP11_SUPPORTED
 
 class context_base : noncopyable
 {
