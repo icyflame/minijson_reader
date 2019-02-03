@@ -894,7 +894,7 @@ void parse_init_helper(const Context& context, char& c, bool& must_read)
 template<typename Context>
 value parse_value_helper(Context& context, char& c, bool& must_read)
 {
-    const std::pair<value, char> read_value_result = detail::read_value(context, c);
+    const std::pair<value, char> read_value_result = read_value(context, c);
     const value v = read_value_result.first;
 
     if (v.type() == Object)
