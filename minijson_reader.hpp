@@ -1,20 +1,18 @@
 #ifndef MINIJSON_READER_H
 #define MINIJSON_READER_H
 
-#include <cstdlib>
 #include <cctype>
-#include <stdint.h>
-#include <climits>
-#include <cstring>
 #include <cerrno>
-
-#include <vector>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
+#include <istream>
 #include <list>
+#include <stdexcept>
+#include <stdint.h>
 #include <string>
 #include <utility>
-
-#include <stdexcept>
-#include <istream>
+#include <vector>
 
 #define MJR_CPP11_SUPPORTED __cplusplus > 199711L || _MSC_VER >= 1800
 
