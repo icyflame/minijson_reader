@@ -584,8 +584,10 @@ void write_utf8_char(Context& context, const utf8_char& c)
     }
 }
 
+// Consumes a quoted string from the input, handling escape sequences and UTF-16 surrogates.
+// Writes a UTF-8 string, with no quotes and escape sequences, on the same context.
 template<typename Context>
-void read_quoted_string(Context& context, bool skip_opening_quote = false)
+void consume_quoted(Context& context, bool skip_opening_quote = false)
 {
     enum
     {
@@ -715,9 +717,10 @@ void read_quoted_string(Context& context, bool skip_opening_quote = false)
     context.write(0);
 }
 
-// reads any value that is not a string (or an object/array)
+// Consumes any value that is not a quoted string, an object or an array, re-writing it verbatim on the
+// same context. Returns the first character following the value.
 template<typename Context>
-char read_unquoted_value(Context& context, char first_char = 0)
+char consume_unquoted(Context& context, char first_char = 0)
 {
     if (first_char != 0)
     {
@@ -738,7 +741,7 @@ char read_unquoted_value(Context& context, char first_char = 0)
 
     context.write(0);
 
-    return c; // return the termination character (or it will be lost forever)
+    return c;
 }
 
 } // namespace detail
@@ -801,6 +804,7 @@ public:
 namespace detail
 {
 
+// Parses a Boolean, Null or Number value
 template<typename Context>
 value parse_unquoted_value(const Context& context)
 {
@@ -844,8 +848,10 @@ value parse_unquoted_value(const Context& context)
     }
 }
 
+// Helper for parse_value(). Returns the parsed value and the first character following the value
+// (where applicable).
 template<typename Context>
-std::pair<value, char> read_value(Context& context, char first_char)
+std::pair<value, char> parse_value_helper(Context& context, char first_char)
 {
     if (first_char == '{')
     {
@@ -858,44 +864,50 @@ std::pair<value, char> read_value(Context& context, char first_char)
     else if (first_char == '"') // quoted string
     {
         context.new_write_buffer();
-        read_quoted_string(context, true);
+        consume_quoted(context, true);
 
         return std::make_pair(value(String, context.write_buffer()), 0);
     }
     else // unquoted value
     {
         context.new_write_buffer();
-        const char ending_char = read_unquoted_value(context, first_char);
+        const char ending_char = consume_unquoted(context, first_char);
 
         return std::make_pair(parse_unquoted_value(context), ending_char);
     }
 }
 
+// Initializes the parser taking into account whether we are reading a nested object/array or not
 template<typename Context>
-void parse_init_helper(const Context& context, char& c, bool& must_read)
+void parse_init(const Context& context, char& c, bool& must_read)
 {
     switch (context.nested_status())
     {
     case Context::NESTED_STATUS_NONE:
+        // We are not in a nested object/array, read the first character from the input
         c = 0;
         must_read = true;
         break;
     case Context::NESTED_STATUS_OBJECT:
+        // Do not read the first character from the input, assume it is a '{'
         c = '{';
         must_read = false;
         break;
     case Context::NESTED_STATUS_ARRAY:
+        // Do not read the first character from the input, assume it is a '['
         c = '[';
         must_read = false;
         break;
     }
 }
 
+// Parses a value and updates the context and the parser state accordingly
 template<typename Context>
-value parse_value_helper(Context& context, char& c, bool& must_read)
+value parse_value(Context& context, char& c, bool& must_read)
 {
-    const std::pair<value, char> read_value_result = read_value(context, c);
-    const value v = read_value_result.first;
+    // `c` contains the first character forming the value
+    const std::pair<value, char> r = parse_value_helper(context, c);
+    const value v = r.first;
 
     if (v.type() == Object)
     {
@@ -907,7 +919,9 @@ value parse_value_helper(Context& context, char& c, bool& must_read)
     }
     else if (v.type() != String)
     {
-        c = read_value_result.second;
+        // set `c` to the first character following the value, and tell the parser it
+        // must not read a character from the input for the next iteration
+        c = r.second;
         must_read = false;
     }
 
@@ -928,7 +942,7 @@ void parse_object(Context& context, Handler handler)
     char c = 0;
     bool must_read = false;
 
-    parse_init_helper(context, c, must_read);
+    detail::parse_init(context, c, must_read);
     context.reset_nested_status();
 
     enum
@@ -987,7 +1001,7 @@ void parse_object(Context& context, Handler handler)
                 throw parse_error(context, parse_error::EXPECTED_OPENING_QUOTE);
             }
             context.new_write_buffer();
-            detail::read_quoted_string(context, true);
+            detail::consume_quoted(context, true);
             field_name = context.write_buffer();
             state = COLON;
             break;
@@ -1001,7 +1015,7 @@ void parse_object(Context& context, Handler handler)
             break;
 
         case FIELD_VALUE:
-            handler(field_name, parse_value_helper(context, c, must_read));
+            handler(field_name, detail::parse_value(context, c, must_read));
             state = COMMA_OR_CLOSING_BRACKET;
             break;
 
@@ -1046,7 +1060,7 @@ void parse_array(Context& context, Handler handler)
     char c = 0;
     bool must_read = false;
 
-    parse_init_helper(context, c, must_read);
+    detail::parse_init(context, c, must_read);
     context.reset_nested_status();
 
     enum
@@ -1096,7 +1110,7 @@ void parse_array(Context& context, Handler handler)
             // intentional fall-through
 
         case VALUE:
-            handler(parse_value_helper(context, c, must_read));
+            handler(detail::parse_value(context, c, must_read));
             state = COMMA_OR_CLOSING_BRACKET;
             break;
 
