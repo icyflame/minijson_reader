@@ -1368,6 +1368,128 @@ struct parse_dummy_consume
     }
 };
 
+TEST(minijson_reader, parse_object_empty_string)
+{
+    using minijson::parse_error;
+
+    {
+        bool exception_thrown = false;
+
+        minijson::buffer_context buffer_context(NULL, 0);
+
+        try
+        {
+            minijson::parse_object(buffer_context, parse_dummy());
+        }
+        catch (const parse_error& e)
+        {
+            exception_thrown = true;
+            ASSERT_EQ(parse_error::EXPECTED_OPENING_BRACKET, e.reason());
+            ASSERT_STREQ("Expected opening bracket", e.what());
+        }
+
+        ASSERT_TRUE(exception_thrown);
+    }
+    {
+        bool exception_thrown = false;
+
+        minijson::const_buffer_context const_buffer_context(NULL, 0);
+
+        try
+        {
+            minijson::parse_object(const_buffer_context, parse_dummy());
+        }
+        catch (const parse_error& e)
+        {
+            exception_thrown = true;
+            ASSERT_EQ(parse_error::EXPECTED_OPENING_BRACKET, e.reason());
+            ASSERT_STREQ("Expected opening bracket", e.what());
+        }
+
+        ASSERT_TRUE(exception_thrown);
+    }
+    {
+        bool exception_thrown = false;
+
+        std::istringstream buffer;
+        minijson::istream_context istream_context(buffer);
+
+        try
+        {
+            minijson::parse_object(istream_context, parse_dummy());
+        }
+        catch (const parse_error& e)
+        {
+            exception_thrown = true;
+            ASSERT_EQ(parse_error::EXPECTED_OPENING_BRACKET, e.reason());
+            ASSERT_STREQ("Expected opening bracket", e.what());
+        }
+
+        ASSERT_TRUE(exception_thrown);
+    }
+}
+
+TEST(minijson_reader, parse_array_empty_string)
+{
+    using minijson::parse_error;
+
+    {
+        bool exception_thrown = false;
+
+        minijson::buffer_context buffer_context(NULL, 0);
+
+        try
+        {
+            minijson::parse_array(buffer_context, parse_dummy());
+        }
+        catch (const parse_error& e)
+        {
+            exception_thrown = true;
+            ASSERT_EQ(parse_error::EXPECTED_OPENING_BRACKET, e.reason());
+            ASSERT_STREQ("Expected opening bracket", e.what());
+        }
+
+        ASSERT_TRUE(exception_thrown);
+    }
+    {
+        bool exception_thrown = false;
+
+        minijson::const_buffer_context const_buffer_context(NULL, 0);
+
+        try
+        {
+            minijson::parse_array(const_buffer_context, parse_dummy());
+        }
+        catch (const parse_error& e)
+        {
+            exception_thrown = true;
+            ASSERT_EQ(parse_error::EXPECTED_OPENING_BRACKET, e.reason());
+            ASSERT_STREQ("Expected opening bracket", e.what());
+        }
+
+        ASSERT_TRUE(exception_thrown);
+    }
+    {
+        bool exception_thrown = false;
+
+        std::istringstream buffer;
+        minijson::istream_context istream_context(buffer);
+
+        try
+        {
+            minijson::parse_array(istream_context, parse_dummy());
+        }
+        catch (const parse_error& e)
+        {
+            exception_thrown = true;
+            ASSERT_EQ(parse_error::EXPECTED_OPENING_BRACKET, e.reason());
+            ASSERT_STREQ("Expected opening bracket", e.what());
+        }
+
+        ASSERT_TRUE(exception_thrown);
+    }
+}
+
 TEST(minijson_reader, parse_object_truncated)
 {
     using minijson::parse_error;
