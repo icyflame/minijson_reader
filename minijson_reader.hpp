@@ -170,6 +170,25 @@ public:
     }
 }; // class buffer_context_base
 
+class storage
+{
+private:
+
+    std::vector<char> m_storage;
+
+protected:
+
+    char* storage_pointer()
+    {
+        return !m_storage.empty() ? &m_storage[0] : NULL;
+    }
+
+    explicit storage(size_t length) :
+        m_storage(length)
+    {
+    }
+}; // class storage
+
 } // namespace detail
 
 class buffer_context MJR_FINAL : public detail::buffer_context_base
@@ -182,18 +201,14 @@ public:
     }
 }; // class buffer_context
 
-class const_buffer_context MJR_FINAL : public detail::buffer_context_base
+class const_buffer_context MJR_FINAL : private detail::storage, public detail::buffer_context_base
 {
 public:
 
     explicit const_buffer_context(const char* buffer, size_t length) :
-        detail::buffer_context_base(buffer, new char[length], length) // don't worry about leaks, buffer_context_base can't throw
+        detail::storage(length),
+        detail::buffer_context_base(buffer, storage_pointer(), length)
     {
-    }
-
-    ~const_buffer_context()
-    {
-        delete[] m_write_buffer;
     }
 }; // class const_buffer_context
 
