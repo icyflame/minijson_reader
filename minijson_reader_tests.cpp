@@ -188,10 +188,10 @@ TEST(minijson_reader, istream_context)
 template<typename Context>
 void test_context_empty_string_helper(Context& context)
 {
-    ASSERT_EQ(0, context.read_offset());
+    ASSERT_EQ(0U, context.read_offset());
     ASSERT_EQ(0, context.read());
     ASSERT_EQ(0, context.read());
-    ASSERT_EQ(0, context.read_offset());
+    ASSERT_EQ(0U, context.read_offset());
 
     ASSERT_THROW(context.write_buffer(), std::runtime_error);
     context.new_write_buffer();
