@@ -142,10 +142,12 @@ public:
 
     void end_nested()
     {
-        if (m_nesting_level > 0)
+        if (m_nesting_level == 0)
         {
-            m_nesting_level--;
+            throw std::runtime_error("Invalid context_base::end_nested() call, please file a bug report");
         }
+
+        m_nesting_level--;
     }
 
     size_t nesting_level() const
@@ -202,7 +204,7 @@ public:
     {
         if (m_write_offset >= m_read_offset)
         {
-            throw std::runtime_error("Invalid write call, please file a bug report");
+            throw std::runtime_error("Invalid buffer_context_base::write() call, please file a bug report");
         }
 
         m_write_buffer[m_write_offset++] = c;
@@ -210,6 +212,11 @@ public:
 
     const char* write_buffer() const
     {
+        if (m_current_write_buffer >= m_write_buffer + m_length)
+        {
+            throw std::runtime_error("Invalid buffer_context_base::write_buffer() call, please file a bug report");
+        }
+
         return m_current_write_buffer;
     }
 }; // class buffer_context_base
@@ -308,7 +315,14 @@ public:
     // AFTER all the calls to write() for the current write buffer have been performed
     const char* write_buffer() const
     {
-        return !m_write_buffers.back().empty() ? &m_write_buffers.back()[0] : NULL;
+        const std::vector<char> & b = m_write_buffers.back();
+
+        if (b.empty())
+        {
+            throw std::runtime_error("Invalid istream_context::write_buffer() call, please file a bug report");
+        }
+
+        return &b[0];
     }
 }; // class istream_context
 
@@ -369,19 +383,19 @@ public:
     {
         switch (m_reason)
         {
-        case UNKNOWN:                           return "Unknown parse error";
-        case EXPECTED_OPENING_QUOTE:            return "Expected opening quote";
-        case EXPECTED_UTF16_LOW_SURROGATE:      return "Expected UTF-16 low surrogate";
-        case INVALID_ESCAPE_SEQUENCE:           return "Invalid escape sequence";
-        case INVALID_UTF16_CHARACTER:           return "Invalid UTF-16 character";
-        case EXPECTED_CLOSING_QUOTE:            return "Expected closing quote";
-        case INVALID_VALUE:                     return "Invalid value";
-        case UNTERMINATED_VALUE:                return "Unterminated value";
-        case EXPECTED_OPENING_BRACKET:          return "Expected opening bracket";
-        case EXPECTED_COLON:                    return "Expected colon";
-        case EXPECTED_COMMA_OR_CLOSING_BRACKET: return "Expected comma or closing bracket";
-        case NESTED_OBJECT_OR_ARRAY_NOT_PARSED: return "Nested object or array not parsed";
-        case EXCEEDED_NESTING_LIMIT:            return "Exceeded nesting limit (" MJR_STRINGIFY(MJR_NESTING_LIMIT) ")";
+            case UNKNOWN:                           return "Unknown parse error";
+            case EXPECTED_OPENING_QUOTE:            return "Expected opening quote";
+            case EXPECTED_UTF16_LOW_SURROGATE:      return "Expected UTF-16 low surrogate";
+            case INVALID_ESCAPE_SEQUENCE:           return "Invalid escape sequence";
+            case INVALID_UTF16_CHARACTER:           return "Invalid UTF-16 character";
+            case EXPECTED_CLOSING_QUOTE:            return "Expected closing quote";
+            case INVALID_VALUE:                     return "Invalid value";
+            case UNTERMINATED_VALUE:                return "Unterminated value";
+            case EXPECTED_OPENING_BRACKET:          return "Expected opening bracket";
+            case EXPECTED_COLON:                    return "Expected colon";
+            case EXPECTED_COMMA_OR_CLOSING_BRACKET: return "Expected comma or closing bracket";
+            case NESTED_OBJECT_OR_ARRAY_NOT_PARSED: return "Nested object or array not parsed";
+            case EXCEEDED_NESTING_LIMIT:            return "Exceeded nesting limit (" MJR_STRINGIFY(MJR_NESTING_LIMIT) ")";
         }
 
         return ""; // to suppress compiler warnings -- LCOV_EXCL_LINE
@@ -624,7 +638,7 @@ void consume_quoted(Context& context, bool skip_opening_quote = false)
     } state = (skip_opening_quote) ? CHARACTER : OPENING_QUOTE;
 
     bool empty = true;
-    char utf16_seq[UTF16_ESCAPE_SEQ_LENGTH + 1] = { 0 };
+    char utf16_seq[UTF16_ESCAPE_SEQ_LENGTH + 1] = {0};
     size_t utf16_seq_offset = 0;
     uint16_t high_surrogate = 0;
 
@@ -1070,7 +1084,10 @@ void parse_object(Context& context, Handler handler)
         }
     }
 
-    context.end_nested();
+    if (nesting_level > 0)
+    {
+        context.end_nested();
+    }
 }
 
 template<typename Context, typename Handler>
@@ -1165,7 +1182,10 @@ void parse_array(Context& context, Handler handler)
         }
     }
 
-    context.end_nested();
+    if (nesting_level > 0)
+    {
+        context.end_nested();
+    }
 }
 
 namespace detail

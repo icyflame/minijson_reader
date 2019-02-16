@@ -41,26 +41,82 @@ template<typename Context>
 void test_context_helper(Context& context)
 {
     bool loop = true;
+
     while (loop)
     {
         switch (context.read_offset())
         {
-        case 0:  ASSERT_EQ('h', context.read()); context.write('H'); break;
-        case 1:  ASSERT_EQ('e', context.read()); context.write('e'); break;
-        case 2:  ASSERT_EQ('l', context.read()); context.write('l'); break;
-        case 3:  ASSERT_EQ('l', context.read()); context.write('l'); break;
-        case 4:  ASSERT_EQ('o', context.read()); context.write('o'); break;
-        case 5:  ASSERT_EQ(' ', context.read()); context.write(0); ASSERT_STREQ("Hello", context.write_buffer()); context.new_write_buffer(); break;
-        case 6:  ASSERT_EQ('w', context.read()); context.write('W'); break;
-        case 7:  ASSERT_EQ('o', context.read()); context.write('o'); break;
-        case 8:  ASSERT_EQ('r', context.read()); context.write('r'); break;
-        case 9:  ASSERT_EQ('l', context.read()); context.write('l'); break;
-        case 10: ASSERT_EQ('d', context.read()); context.write('d'); break;
-        case 11: ASSERT_EQ('.', context.read()); context.write(0);   break;
-        case 12: ASSERT_EQ(0,   context.read()); loop = false;  break;
+            case 0:
+                ASSERT_EQ('h', context.read());
+                context.write('H');
+                break;
+
+            case 1:
+                ASSERT_EQ('e', context.read());
+                context.write('e');
+                break;
+
+            case 2:
+                ASSERT_EQ('l', context.read());
+                context.write('l');
+                break;
+
+            case 3:
+                ASSERT_EQ('l', context.read());
+                context.write('l');
+                break;
+
+            case 4:
+                ASSERT_EQ('o', context.read());
+                context.write('o');
+                break;
+
+            case 5:
+                ASSERT_EQ(' ', context.read());
+                context.write(0);
+                ASSERT_STREQ("Hello", context.write_buffer());
+                context.new_write_buffer();
+                break;
+
+            case 6:
+                ASSERT_EQ('w', context.read());
+                context.write('W');
+                break;
+
+            case 7:
+                ASSERT_EQ('o', context.read());
+                context.write('o');
+                break;
+
+            case 8:
+                ASSERT_EQ('r', context.read());
+                context.write('r');
+                break;
+
+            case 9:
+                ASSERT_EQ('l', context.read());
+                context.write('l');
+                break;
+
+            case 10:
+                ASSERT_EQ('d', context.read());
+                context.write('d');
+                break;
+
+            case 11:
+                ASSERT_EQ('.', context.read());
+                context.write(0);
+                break;
+
+            case 12:
+                ASSERT_EQ(0, context.read());
+                loop = false;
+                break;
         }
     }
 
+    ASSERT_EQ(0, context.read());
+    ASSERT_EQ(12U, context.read_offset());
     ASSERT_EQ(0, context.read());
     ASSERT_EQ(12U, context.read_offset());
     ASSERT_STREQ("World", context.write_buffer());
@@ -70,13 +126,18 @@ void test_context_helper(Context& context)
     context.begin_nested(minijson::detail::context_base::NESTED_STATUS_OBJECT);
     ASSERT_EQ(minijson::detail::context_base::NESTED_STATUS_OBJECT, context.nested_status());
     ASSERT_EQ(1U, context.nesting_level());
+
     context.begin_nested(minijson::detail::context_base::NESTED_STATUS_ARRAY);
     ASSERT_EQ(minijson::detail::context_base::NESTED_STATUS_ARRAY, context.nested_status());
     ASSERT_EQ(2U, context.nesting_level());
+
     context.end_nested();
     ASSERT_EQ(1U, context.nesting_level());
+
     context.end_nested();
     ASSERT_EQ(0U, context.nesting_level());
+
+    ASSERT_THROW(context.end_nested(), std::runtime_error);
 
     context.reset_nested_status();
     ASSERT_EQ(minijson::detail::context_base::NESTED_STATUS_NONE, context.nested_status());
@@ -84,15 +145,16 @@ void test_context_helper(Context& context)
 
 TEST(minijson_reader, buffer_context)
 {
-    char buffer[] = { 'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '.' };
+    char buffer[] = {'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd', '.'};
     minijson::buffer_context buffer_context(buffer, sizeof(buffer));
     test_context_helper(buffer_context);
 
     ASSERT_STREQ("Hello", buffer);
     ASSERT_STREQ("World", buffer + 6);
     ASSERT_THROW(buffer_context.write('x'), std::runtime_error);
+    ASSERT_STREQ("World", buffer_context.write_buffer());
     buffer_context.new_write_buffer();
-    ASSERT_EQ(buffer + sizeof(buffer), buffer_context.write_buffer());
+    ASSERT_THROW(buffer_context.write_buffer(), std::runtime_error);
     ASSERT_THROW(buffer_context.write('x'), std::runtime_error);
 }
 
@@ -104,9 +166,11 @@ TEST(minijson_reader, const_buffer_context)
     test_context_helper(const_buffer_context);
 
     ASSERT_STREQ("hello world.", buffer); // no side effects
+    ASSERT_EQ(original_write_buffer + 6, const_buffer_context.write_buffer());
+    ASSERT_STREQ("World", const_buffer_context.write_buffer());
     ASSERT_THROW(const_buffer_context.write('x'), std::runtime_error);
     const_buffer_context.new_write_buffer();
-    ASSERT_EQ(original_write_buffer + strlen(buffer), const_buffer_context.write_buffer());
+    ASSERT_THROW(const_buffer_context.write_buffer(), std::runtime_error);
     ASSERT_THROW(const_buffer_context.write('x'), std::runtime_error);
 }
 
@@ -115,6 +179,57 @@ TEST(minijson_reader, istream_context)
     std::istringstream buffer("hello world.");
     minijson::istream_context istream_context(buffer);
     test_context_helper(istream_context);
+
+    ASSERT_STREQ("World", istream_context.write_buffer());
+    istream_context.new_write_buffer();
+    ASSERT_THROW(istream_context.write_buffer(), std::runtime_error);
+}
+
+template<typename Context>
+void test_context_empty_string_helper(Context& context)
+{
+    ASSERT_EQ(0, context.read_offset());
+    ASSERT_EQ(0, context.read());
+    ASSERT_EQ(0, context.read());
+    ASSERT_EQ(0, context.read_offset());
+
+    ASSERT_THROW(context.write_buffer(), std::runtime_error);
+    context.new_write_buffer();
+    ASSERT_THROW(context.write_buffer(), std::runtime_error);
+}
+
+TEST(minijson_reader, context_empty_string)
+{
+    {
+        char empty[] = {0};
+        minijson::buffer_context buffer_context(empty, 0);
+        test_context_empty_string_helper(buffer_context);
+        ASSERT_THROW(buffer_context.write('x'), std::runtime_error);
+    }
+    {
+        minijson::const_buffer_context const_buffer_context("", 0);
+        test_context_empty_string_helper(const_buffer_context);
+        ASSERT_THROW(const_buffer_context.write('x'), std::runtime_error);
+    }
+    {
+        std::istringstream ss;
+        minijson::istream_context istream_context(ss);
+        test_context_empty_string_helper(istream_context);
+    }
+}
+
+TEST(minijson_reader, context_null_string)
+{
+    {
+        minijson::buffer_context buffer_context(NULL, 0);
+        test_context_empty_string_helper(buffer_context);
+        ASSERT_THROW(buffer_context.write('x'), std::runtime_error);
+    }
+    {
+        minijson::const_buffer_context const_buffer_context(NULL, 0);
+        test_context_empty_string_helper(const_buffer_context);
+        ASSERT_THROW(const_buffer_context.write('x'), std::runtime_error);
+    }
 }
 
 template<typename Context>
@@ -160,6 +275,53 @@ TEST(minijson_reader, context_no_copy_assignment)
     (void)istream_context;
 }
 
+#if MJR_CPP11_SUPPORTED
+
+template<typename Context>
+void test_context_move_construction_helper(Context&& original)
+{
+    Context c(std::move(original));
+    (void)c;
+}
+
+TEST(minijson_reader, context_no_move_construction)
+{
+    std::istringstream ss;
+
+    // this test is compile-time only: uncommenting any of the following lines should cause a compile error
+    //test_context_move_construction_helper(minijson::buffer_context(NULL, 0));
+    //test_context_move_construction_helper(minijson::const_buffer_context(NULL, 0));
+    //test_context_move_construction_helper(minijson::istream_context(ss));
+
+    (void)ss;
+}
+
+template<typename Context>
+void test_context_move_assignment_helper(Context&& original, Context& c)
+{
+    c = std::move(original);
+}
+
+TEST(minijson_reader, context_no_move_assignment)
+{
+    std::istringstream ss;
+    minijson::buffer_context buffer_context(NULL, 0);
+    minijson::const_buffer_context const_buffer_context(NULL, 0);
+    minijson::istream_context istream_context(ss);
+
+    // this test is compile-time only: uncommenting any of the following lines should cause a compile error
+    //test_context_move_assignment_helper(minijson::buffer_context(NULL, 0), buffer_context);
+    //test_context_move_assignment_helper(minijson::const_buffer_context(NULL, 0), const_buffer_context);
+    //test_context_move_assignment_helper(minijson::istream_context(ss), istream_context);
+
+    (void)ss;
+    (void)buffer_context;
+    (void)const_buffer_context;
+    (void)istream_context;
+}
+
+#endif
+
 TEST(minijson_reader, parse_error)
 {
     {
@@ -184,26 +346,32 @@ TEST(minijson_reader, parse_error)
     }
 }
 
-TEST(minijson_reader_detail, utf8_quad)
+TEST(minijson_reader_detail, utf8_char)
 {
-    minijson::detail::utf8_char utf8_quad;
-    ASSERT_EQ(0U, utf8_quad[0]);
-    ASSERT_EQ(0U, utf8_quad[1]);
-    ASSERT_EQ(0U, utf8_quad[2]);
-    ASSERT_EQ(0U, utf8_quad[3]);
+    minijson::detail::utf8_char utf8_char;
+    ASSERT_EQ(0U, utf8_char[0]);
+    ASSERT_EQ(0U, utf8_char[1]);
+    ASSERT_EQ(0U, utf8_char[2]);
+    ASSERT_EQ(0U, utf8_char[3]);
 
-    const minijson::detail::utf8_char utf8_quad1(0, 1, 2, 3);
-    ASSERT_EQ(0U, utf8_quad1[0]);
-    ASSERT_EQ(1U, utf8_quad1[1]);
-    ASSERT_EQ(2U, utf8_quad1[2]);
-    ASSERT_EQ(3U, utf8_quad1[3]);
+    const minijson::detail::utf8_char utf8_char1(0, 1, 2, 3);
+    ASSERT_EQ(0U, utf8_char1[0]);
+    ASSERT_EQ(1U, utf8_char1[1]);
+    ASSERT_EQ(2U, utf8_char1[2]);
+    ASSERT_EQ(3U, utf8_char1[3]);
 
-    minijson::detail::utf8_char utf8_quad2;
+    minijson::detail::utf8_char utf8_char2;
 
-    ASSERT_TRUE(utf8_quad == utf8_quad2);
-    ASSERT_TRUE(utf8_quad != utf8_quad1);
-    ASSERT_FALSE(utf8_quad != utf8_quad2);
-    ASSERT_FALSE(utf8_quad == utf8_quad1);
+    ASSERT_TRUE(utf8_char == utf8_char2);
+    ASSERT_TRUE(utf8_char != utf8_char1);
+    ASSERT_FALSE(utf8_char != utf8_char2);
+    ASSERT_FALSE(utf8_char == utf8_char1);
+
+    utf8_char[0] = 0;
+    utf8_char[1] = 1;
+    utf8_char[2] = 2;
+    utf8_char[3] = 3;
+    ASSERT_TRUE(utf8_char == utf8_char1);
 }
 
 TEST(minijson_reader_detail, utf16_to_utf32)
@@ -235,73 +403,73 @@ TEST(minijson_reader_detail, utf32_to_utf8)
 {
     // 1 byte
     {
-        const uint8_t expected[] = { 0x00, 0x00, 0x00, 0x00 };
+        const uint8_t expected[] = {0x00, 0x00, 0x00, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x000000).bytes));
     }
     {
-        const uint8_t expected[] = { 0x01, 0x00, 0x00, 0x00 };
+        const uint8_t expected[] = {0x01, 0x00, 0x00, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x000001).bytes));
     }
     {
-        const uint8_t expected[] = { 0x7E, 0x00, 0x00, 0x00 };
+        const uint8_t expected[] = {0x7E, 0x00, 0x00, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x00007E).bytes));
     }
     {
-        const uint8_t expected[] = { 0x7F, 0x00, 0x00, 0x00 };
+        const uint8_t expected[] = {0x7F, 0x00, 0x00, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x00007F).bytes));
     }
 
     // 2 bytes
     {
-        const uint8_t expected[] = { 0xC2, 0x80, 0x00, 0x00 };
+        const uint8_t expected[] = {0xC2, 0x80, 0x00, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x000080).bytes));
     }
     {
-        const uint8_t expected[] = { 0xC2, 0x81, 0x00, 0x00 };
+        const uint8_t expected[] = {0xC2, 0x81, 0x00, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x000081).bytes));
     }
     {
-        const uint8_t expected[] = { 0xDF, 0xBE, 0x00, 0x00 };
+        const uint8_t expected[] = {0xDF, 0xBE, 0x00, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x0007FE).bytes));
     }
     {
-        const uint8_t expected[] = { 0xDF, 0xBF, 0x00, 0x00 };
+        const uint8_t expected[] = {0xDF, 0xBF, 0x00, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x0007FF).bytes));
     }
 
     // 3 bytes
     {
-        const uint8_t expected[] = { 0xE0, 0xA0, 0x80, 0x00 };
+        const uint8_t expected[] = {0xE0, 0xA0, 0x80, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x000800).bytes));
     }
     {
-        const uint8_t expected[] = { 0xE0, 0xA0, 0x81, 0x00 };
+        const uint8_t expected[] = {0xE0, 0xA0, 0x81, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x000801).bytes));
     }
     {
-        const uint8_t expected[] = { 0xEF, 0xBF, 0xBE, 0x00 };
+        const uint8_t expected[] = {0xEF, 0xBF, 0xBE, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x00FFFE).bytes));
     }
     {
-        const uint8_t expected[] = { 0xEF, 0xBF, 0xBF, 0x00 };
+        const uint8_t expected[] = {0xEF, 0xBF, 0xBF, 0x00};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x00FFFF).bytes));
     }
 
     // 4 bytes
     {
-        const uint8_t expected[] = { 0xF0, 0x90, 0x80, 0x80 };
+        const uint8_t expected[] = {0xF0, 0x90, 0x80, 0x80};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x010000).bytes));
     }
     {
-        const uint8_t expected[] = { 0xF0, 0x90, 0x80, 0x81 };
+        const uint8_t expected[] = {0xF0, 0x90, 0x80, 0x81};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x010001).bytes));
     }
     {
-        const uint8_t expected[] = { 0xF7, 0xBF, 0xBF, 0xBE };
+        const uint8_t expected[] = {0xF7, 0xBF, 0xBF, 0xBE};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x1FFFFE).bytes));
     }
     {
-        const uint8_t expected[] = { 0xF7, 0xBF, 0xBF, 0xBF };
+        const uint8_t expected[] = {0xF7, 0xBF, 0xBF, 0xBF};
         ASSERT_TRUE(arrays_match(expected, minijson::detail::utf32_to_utf8(0x1FFFFF).bytes));
     }
 }
@@ -317,7 +485,7 @@ TEST(minijson_reader_detail, utf16_to_utf8)
     // Just one test case, since utf16_to_utf8 calls utf16_to_utf32 and utf32_to_utf8,
     // and other cases have been covered by previous tests
 
-    const uint8_t expected[] = { 0xF4, 0x8F, 0xBF, 0xBF };
+    const uint8_t expected[] = {0xF4, 0x8F, 0xBF, 0xBF};
     ASSERT_TRUE(arrays_match(expected, minijson::detail::utf16_to_utf8(0xDBFF, 0xDFFF).bytes));
 }
 
@@ -563,7 +731,6 @@ TEST(minijson_reader_detail, consume_quoted_invalid)
     consume_quoted_invalid_helper("\"\\uD800\"",        minijson::parse_error::EXPECTED_UTF16_LOW_SURROGATE, 7,  "Expected UTF-16 low surrogate");
     consume_quoted_invalid_helper("\"\\uD800a\"",       minijson::parse_error::EXPECTED_UTF16_LOW_SURROGATE, 7,  "Expected UTF-16 low surrogate");
 }
-
 
 template<size_t Length>
 void consume_unquoted_invalid_helper(
