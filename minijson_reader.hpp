@@ -383,19 +383,44 @@ public:
     {
         switch (m_reason)
         {
-            case UNKNOWN:                           return "Unknown parse error";
-            case EXPECTED_OPENING_QUOTE:            return "Expected opening quote";
-            case EXPECTED_UTF16_LOW_SURROGATE:      return "Expected UTF-16 low surrogate";
-            case INVALID_ESCAPE_SEQUENCE:           return "Invalid escape sequence";
-            case INVALID_UTF16_CHARACTER:           return "Invalid UTF-16 character";
-            case EXPECTED_CLOSING_QUOTE:            return "Expected closing quote";
-            case INVALID_VALUE:                     return "Invalid value";
-            case UNTERMINATED_VALUE:                return "Unterminated value";
-            case EXPECTED_OPENING_BRACKET:          return "Expected opening bracket";
-            case EXPECTED_COLON:                    return "Expected colon";
-            case EXPECTED_COMMA_OR_CLOSING_BRACKET: return "Expected comma or closing bracket";
-            case NESTED_OBJECT_OR_ARRAY_NOT_PARSED: return "Nested object or array not parsed";
-            case EXCEEDED_NESTING_LIMIT:            return "Exceeded nesting limit (" MJR_STRINGIFY(MJR_NESTING_LIMIT) ")";
+            case UNKNOWN:
+                return "Unknown parse error";
+
+            case EXPECTED_OPENING_QUOTE:
+                return "Expected opening quote";
+
+            case EXPECTED_UTF16_LOW_SURROGATE:
+                return "Expected UTF-16 low surrogate";
+
+            case INVALID_ESCAPE_SEQUENCE:
+                return "Invalid escape sequence";
+
+            case INVALID_UTF16_CHARACTER:
+                return "Invalid UTF-16 character";
+
+            case EXPECTED_CLOSING_QUOTE:
+                return "Expected closing quote";
+
+            case INVALID_VALUE:
+                return "Invalid value";
+
+            case UNTERMINATED_VALUE:
+                return "Unterminated value";
+
+            case EXPECTED_OPENING_BRACKET:
+                return "Expected opening bracket";
+
+            case EXPECTED_COLON:
+                return "Expected colon";
+
+            case EXPECTED_COMMA_OR_CLOSING_BRACKET:
+                return "Expected comma or closing bracket";
+
+            case NESTED_OBJECT_OR_ARRAY_NOT_PARSED:
+                return "Nested object or array not parsed";
+
+            case EXCEEDED_NESTING_LIMIT:
+                return "Exceeded nesting limit (" MJR_STRINGIFY(MJR_NESTING_LIMIT) ")";
         }
 
         return ""; // to suppress compiler warnings -- LCOV_EXCL_LINE
