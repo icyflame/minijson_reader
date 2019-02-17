@@ -650,97 +650,125 @@ void consume_quoted(Context& context, bool skip_opening_quote = false)
 
         switch (state)
         {
-        case OPENING_QUOTE:
+            case OPENING_QUOTE:
 
-            if (c != '"')
-            {
-                throw parse_error(context, parse_error::EXPECTED_OPENING_QUOTE);
-            }
-            state = CHARACTER;
-
-            break;
-
-        case CHARACTER:
-
-            if (c == '\\')
-            {
-                state = ESCAPE_SEQUENCE;
-            }
-            else if (high_surrogate != 0)
-            {
-                throw parse_error(context, parse_error::EXPECTED_UTF16_LOW_SURROGATE);
-            }
-            else if (c == '"')
-            {
-                state = CLOSED;
-            }
-            else
-            {
-                context.write(c);
-            }
-
-            break;
-
-        case ESCAPE_SEQUENCE:
-
-            state = CHARACTER;
-
-            switch (c)
-            {
-            case '"': context.write('"'); break;
-            case '\\': context.write('\\'); break;
-            case '/': context.write('/'); break;
-            case 'b': context.write('\b'); break;
-            case 'f': context.write('\f'); break;
-            case 'n': context.write('\n'); break;
-            case 'r': context.write('\r'); break;
-            case 't': context.write('\t'); break;
-            case 'u': state = UTF16_SEQUENCE; break;
-            default: throw parse_error(context, parse_error::INVALID_ESCAPE_SEQUENCE);
-            }
-
-            break;
-
-        case UTF16_SEQUENCE:
-
-            utf16_seq[utf16_seq_offset++] = c;
-
-            if (utf16_seq_offset == sizeof(utf16_seq) - 1)
-            {
-                try
+                if (c != '"')
                 {
-                    const uint16_t code_unit = parse_utf16_escape_sequence(utf16_seq);
-
-                    if (high_surrogate != 0)
-                    {
-                        // we were waiting for the low surrogate (that now is code_unit)
-                        write_utf8_char(context, utf16_to_utf8(high_surrogate, code_unit));
-                        high_surrogate = 0;
-                    }
-                    else if (code_unit >= 0xD800 && code_unit <= 0xDBFF)
-                    {
-                        high_surrogate = code_unit;
-                    }
-                    else
-                    {
-                        write_utf8_char(context, utf16_to_utf8(code_unit, 0));
-                    }
+                    throw parse_error(context, parse_error::EXPECTED_OPENING_QUOTE);
                 }
-                catch (const encoding_error&)
+                state = CHARACTER;
+
+                break;
+
+            case CHARACTER:
+
+                if (c == '\\')
                 {
-                    throw parse_error(context, parse_error::INVALID_UTF16_CHARACTER);
+                    state = ESCAPE_SEQUENCE;
+                }
+                else if (high_surrogate != 0)
+                {
+                    throw parse_error(context, parse_error::EXPECTED_UTF16_LOW_SURROGATE);
+                }
+                else if (c == '"')
+                {
+                    state = CLOSED;
+                }
+                else
+                {
+                    context.write(c);
                 }
 
-                utf16_seq_offset = 0;
+                break;
+
+            case ESCAPE_SEQUENCE:
 
                 state = CHARACTER;
-            }
 
-            break;
+                switch (c)
+                {
+                    case '"':
+                        context.write('"');
+                        break;
 
-        case CLOSED: // to silence compiler warnings
+                    case '\\':
+                        context.write('\\');
+                        break;
 
-            throw std::runtime_error("This line should never be reached, please file a bug report"); // LCOV_EXCL_LINE
+                    case '/':
+                        context.write('/');
+                        break;
+
+                    case 'b':
+                        context.write('\b');
+                        break;
+
+                    case 'f':
+                        context.write('\f');
+                        break;
+
+                    case 'n':
+                        context.write('\n');
+                        break;
+
+                    case 'r':
+                        context.write('\r');
+                        break;
+
+                    case 't':
+                        context.write('\t');
+                        break;
+
+                    case 'u':
+                        state = UTF16_SEQUENCE;
+                        break;
+
+                    default:
+                        throw parse_error(context, parse_error::INVALID_ESCAPE_SEQUENCE);
+                }
+
+                break;
+
+            case UTF16_SEQUENCE:
+
+                utf16_seq[utf16_seq_offset++] = c;
+
+                if (utf16_seq_offset == sizeof(utf16_seq) - 1)
+                {
+                    try
+                    {
+                        const uint16_t code_unit = parse_utf16_escape_sequence(utf16_seq);
+
+                        if (high_surrogate != 0)
+                        {
+                            // we were waiting for the low surrogate (that now is code_unit)
+                            write_utf8_char(context, utf16_to_utf8(high_surrogate, code_unit));
+                            high_surrogate = 0;
+                        }
+                        else if (code_unit >= 0xD800 && code_unit <= 0xDBFF)
+                        {
+                            high_surrogate = code_unit;
+                        }
+                        else
+                        {
+                            write_utf8_char(context, utf16_to_utf8(code_unit, 0));
+                        }
+                    }
+                    catch (const encoding_error&)
+                    {
+                        throw parse_error(context, parse_error::INVALID_UTF16_CHARACTER);
+                    }
+
+                    utf16_seq_offset = 0;
+
+                    state = CHARACTER;
+                }
+
+                break;
+
+            case CLOSED: // to silence compiler warnings
+
+                throw std::runtime_error("This line should never be reached, please file a bug report"); // LCOV_EXCL_LINE
         }
     }
 
@@ -922,21 +950,23 @@ void parse_init(const Context& context, char& c, bool& must_read)
 {
     switch (context.nested_status())
     {
-    case Context::NESTED_STATUS_NONE:
-        // We are not in a nested object/array, read the first character from the input
-        c = 0;
-        must_read = true;
-        break;
-    case Context::NESTED_STATUS_OBJECT:
-        // Do not read the first character from the input, assume it is a '{'
-        c = '{';
-        must_read = false;
-        break;
-    case Context::NESTED_STATUS_ARRAY:
-        // Do not read the first character from the input, assume it is a '['
-        c = '[';
-        must_read = false;
-        break;
+        case Context::NESTED_STATUS_NONE:
+            // We are not in a nested object/array, read the first character from the input
+            c = 0;
+            must_read = true;
+            break;
+
+        case Context::NESTED_STATUS_OBJECT:
+            // Do not read the first character from the input, assume it is a '{'
+            c = '{';
+            must_read = false;
+            break;
+
+        case Context::NESTED_STATUS_ARRAY:
+            // Do not read the first character from the input, assume it is a '['
+            c = '[';
+            must_read = false;
+            break;
     }
 }
 
@@ -1018,64 +1048,64 @@ void parse_object(Context& context, Handler handler)
 
         switch (state)
         {
-        case OPENING_BRACKET:
-            if (c != '{')
-            {
-                throw parse_error(context, parse_error::EXPECTED_OPENING_BRACKET);
-            }
-            state = FIELD_NAME_OR_CLOSING_BRACKET;
-            break;
-
-        case FIELD_NAME_OR_CLOSING_BRACKET:
-            if (c == '}')
-            {
-                state = END;
+            case OPENING_BRACKET:
+                if (c != '{')
+                {
+                    throw parse_error(context, parse_error::EXPECTED_OPENING_BRACKET);
+                }
+                state = FIELD_NAME_OR_CLOSING_BRACKET;
                 break;
-            }
-            // intentional fall-through
 
-        case FIELD_NAME:
-            if (c != '"')
-            {
-                throw parse_error(context, parse_error::EXPECTED_OPENING_QUOTE);
-            }
-            context.new_write_buffer();
-            detail::consume_quoted(context, true);
-            field_name = context.write_buffer();
-            state = COLON;
-            break;
+            case FIELD_NAME_OR_CLOSING_BRACKET:
+                if (c == '}')
+                {
+                    state = END;
+                    break;
+                }
+                // intentional fall-through
 
-        case COLON:
-            if (c != ':')
-            {
-                throw parse_error(context, parse_error::EXPECTED_COLON);
-            }
-            state = FIELD_VALUE;
-            break;
+            case FIELD_NAME:
+                if (c != '"')
+                {
+                    throw parse_error(context, parse_error::EXPECTED_OPENING_QUOTE);
+                }
+                context.new_write_buffer();
+                detail::consume_quoted(context, true);
+                field_name = context.write_buffer();
+                state = COLON;
+                break;
 
-        case FIELD_VALUE:
-            handler(field_name, detail::parse_value(context, c, must_read));
-            state = COMMA_OR_CLOSING_BRACKET;
-            break;
+            case COLON:
+                if (c != ':')
+                {
+                    throw parse_error(context, parse_error::EXPECTED_COLON);
+                }
+                state = FIELD_VALUE;
+                break;
 
-        case COMMA_OR_CLOSING_BRACKET:
-            if (c == ',')
-            {
-                state = FIELD_NAME;
-            }
-            else if (c == '}')
-            {
-                state = END;
-            }
-            else
-            {
-                throw parse_error(context, parse_error::EXPECTED_COMMA_OR_CLOSING_BRACKET);
-            }
-            break;
+            case FIELD_VALUE:
+                handler(field_name, detail::parse_value(context, c, must_read));
+                state = COMMA_OR_CLOSING_BRACKET;
+                break;
 
-        case END:
+            case COMMA_OR_CLOSING_BRACKET:
+                if (c == ',')
+                {
+                    state = FIELD_NAME;
+                }
+                else if (c == '}')
+                {
+                    state = END;
+                }
+                else
+                {
+                    throw parse_error(context, parse_error::EXPECTED_COMMA_OR_CLOSING_BRACKET);
+                }
+                break;
 
-            throw std::runtime_error("This line should never be reached, please file a bug report"); // LCOV_EXCL_LINE
+            case END:
+
+                throw std::runtime_error("This line should never be reached, please file a bug report"); // LCOV_EXCL_LINE
         }
 
         if (c == 0)
@@ -1135,45 +1165,45 @@ void parse_array(Context& context, Handler handler)
 
         switch (state)
         {
-        case OPENING_BRACKET:
-            if (c != '[')
-            {
-                throw parse_error(context, parse_error::EXPECTED_OPENING_BRACKET);
-            }
-            state = VALUE_OR_CLOSING_BRACKET;
-            break;
-
-        case VALUE_OR_CLOSING_BRACKET:
-            if (c == ']')
-            {
-                state = END;
+            case OPENING_BRACKET:
+                if (c != '[')
+                {
+                    throw parse_error(context, parse_error::EXPECTED_OPENING_BRACKET);
+                }
+                state = VALUE_OR_CLOSING_BRACKET;
                 break;
-            }
-            // intentional fall-through
 
-        case VALUE:
-            handler(detail::parse_value(context, c, must_read));
-            state = COMMA_OR_CLOSING_BRACKET;
-            break;
+            case VALUE_OR_CLOSING_BRACKET:
+                if (c == ']')
+                {
+                    state = END;
+                    break;
+                }
+                // intentional fall-through
 
-        case COMMA_OR_CLOSING_BRACKET:
-            if (c == ',')
-            {
-                state = VALUE;
-            }
-            else if (c == ']')
-            {
-                state = END;
-            }
-            else
-            {
-                throw parse_error(context, parse_error::EXPECTED_COMMA_OR_CLOSING_BRACKET);
-            }
-            break;
+            case VALUE:
+                handler(detail::parse_value(context, c, must_read));
+                state = COMMA_OR_CLOSING_BRACKET;
+                break;
 
-        case END:
+            case COMMA_OR_CLOSING_BRACKET:
+                if (c == ',')
+                {
+                    state = VALUE;
+                }
+                else if (c == ']')
+                {
+                    state = END;
+                }
+                else
+                {
+                    throw parse_error(context, parse_error::EXPECTED_COMMA_OR_CLOSING_BRACKET);
+                }
+                break;
 
-            throw std::runtime_error("This line should never be reached, please file a bug report"); // LCOV_EXCL_LINE
+            case END:
+
+                throw std::runtime_error("This line should never be reached, please file a bug report"); // LCOV_EXCL_LINE
         }
 
         if (c == 0)
@@ -1279,14 +1309,16 @@ public:
     {
         switch (m_context.nested_status())
         {
-        case Context::NESTED_STATUS_NONE:
-            break;
-        case Context::NESTED_STATUS_OBJECT:
-            parse_object(m_context, *this);
-            break;
-        case Context::NESTED_STATUS_ARRAY:
-            parse_array(m_context, *this);
-            break;
+            case Context::NESTED_STATUS_NONE:
+                break;
+
+            case Context::NESTED_STATUS_OBJECT:
+                parse_object(m_context, *this);
+                break;
+
+            case Context::NESTED_STATUS_ARRAY:
+                parse_array(m_context, *this);
+                break;
         }
     }
 }; // class ignore
