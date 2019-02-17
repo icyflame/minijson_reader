@@ -555,7 +555,7 @@ struct number_parse_error
 {
 };
 
-inline long parse_long(const char* str, int base = 10)
+inline long parse_long(const char* str)
 {
     if ((str == NULL) || (*str == 0) || isspace(str[0])) // we don't accept empty strings or strings with leading spaces
     {
@@ -566,7 +566,7 @@ inline long parse_long(const char* str, int base = 10)
     errno = 0; // reset errno
 
     char* endptr;
-    const long result = std::strtol(str, &endptr, base);
+    const long result = std::strtol(str, &endptr, 10);
 
     std::swap(saved_errno, errno); // restore errno
 
@@ -618,21 +618,7 @@ inline double parse_double(const char* str)
     return result;
 }
 
-static const size_t UTF16_ESCAPE_SEQ_LENGTH = 4;
-
-inline uint16_t parse_utf16_escape_sequence(const char* seq)
-{
-    for (size_t i = 0; i < UTF16_ESCAPE_SEQ_LENGTH; i++)
-    {
-        if (!isxdigit(seq[i]))
-        {
-            throw encoding_error();
-        }
-    }
-
-    return static_cast<uint16_t>(parse_long(seq, 16));
-}
-
+// Writes a UTF-8 code unit to the provided context
 template<typename Context>
 void write_utf8_char(Context& context, const utf8_char& c)
 {
@@ -648,7 +634,71 @@ void write_utf8_char(Context& context, const utf8_char& c)
     }
 }
 
-// Consumes a quoted string from the input, handling escape sequences and UTF-16 surrogates.
+// Parses a hex digit as a nibble
+uint8_t parse_hex_digit(char c)
+{
+    switch (c)
+    {
+        case '0':
+            return 0x0;
+
+        case '1':
+            return 0x1;
+
+        case '2':
+            return 0x2;
+
+        case '3':
+            return 0x3;
+
+        case '4':
+            return 0x4;
+
+        case '5':
+            return 0x5;
+
+        case '6':
+            return 0x6;
+
+        case '7':
+            return 0x7;
+
+        case '8':
+            return 0x8;
+
+        case '9':
+            return 0x9;
+
+        case 'A':
+        case 'a':
+            return 0xa;
+
+        case 'B':
+        case 'b':
+            return 0xb;
+
+        case 'C':
+        case 'c':
+            return 0xc;
+
+        case 'D':
+        case 'd':
+            return 0xd;
+
+        case 'E':
+        case 'e':
+            return 0xe;
+
+        case 'F':
+        case 'f':
+            return 0xf;
+
+        default:
+            throw encoding_error();
+    }
+}
+
+// Consumes a quoted string from a context, handling escape sequences.
 // Writes a UTF-8 string, with no quotes and escape sequences, on the same context.
 template<typename Context>
 void consume_quoted(Context& context, bool skip_opening_quote = false)
@@ -662,17 +712,20 @@ void consume_quoted(Context& context, bool skip_opening_quote = false)
         CLOSED
     } state = (skip_opening_quote) ? CHARACTER : OPENING_QUOTE;
 
-    bool empty = true;
-    char utf16_seq[UTF16_ESCAPE_SEQ_LENGTH + 1] = {0};
-    size_t utf16_seq_offset = 0;
+    // UTF-16 code unit being parsed
+    uint16_t utf16_code_unit = 0;
+
+    // Number of parsed hex digits in a UTF-16 escape sequence
+    size_t utf16_seq_count = 0;
+
+    // Stores a UTF-16 high surrogate while waiting for the corresponding low
+    // surrogate of the surrogate pair
     uint16_t high_surrogate = 0;
 
     char c;
 
     while ((state != CLOSED) && ((c = context.read()) != 0))
     {
-        empty = false;
-
         switch (state)
         {
             case OPENING_QUOTE:
@@ -693,6 +746,7 @@ void consume_quoted(Context& context, bool skip_opening_quote = false)
                 }
                 else if (high_surrogate != 0)
                 {
+                    // A high surrogate must be immediately followed by a low surrogate
                     throw parse_error(context, parse_error::EXPECTED_UTF16_LOW_SURROGATE);
                 }
                 else if (c == '"')
@@ -752,31 +806,48 @@ void consume_quoted(Context& context, bool skip_opening_quote = false)
                         throw parse_error(context, parse_error::INVALID_ESCAPE_SEQUENCE);
                 }
 
+                if ((high_surrogate != 0) && (state != UTF16_SEQUENCE))
+                {
+                    // A high surrogate must be immediately followed by a low surrogate
+                    throw parse_error(context, parse_error::EXPECTED_UTF16_LOW_SURROGATE);
+                }
+
                 break;
 
             case UTF16_SEQUENCE:
 
-                utf16_seq[utf16_seq_offset++] = c;
+                try
+                {
+                    utf16_code_unit = (utf16_code_unit << 4) | parse_hex_digit(c);
+                }
+                catch (const encoding_error&)
+                {
+                    throw parse_error(context, parse_error::INVALID_ESCAPE_SEQUENCE);
+                }
 
-                if (utf16_seq_offset == sizeof(utf16_seq) - 1)
+                if (++utf16_seq_count == 4)
                 {
                     try
                     {
-                        const uint16_t code_unit = parse_utf16_escape_sequence(utf16_seq);
-
                         if (high_surrogate != 0)
                         {
-                            // we were waiting for the low surrogate (that now is code_unit)
-                            write_utf8_char(context, utf16_to_utf8(high_surrogate, code_unit));
+                            // We were waiting for the low surrogate (that now is stored in utf16_code_unit).
+                            // Combine high and low surrogate into a Unicode code point and then
+                            // encode it as UTF-8.
+                            write_utf8_char(context, utf16_to_utf8(high_surrogate, utf16_code_unit));
                             high_surrogate = 0;
                         }
-                        else if (code_unit >= 0xD800 && code_unit <= 0xDBFF)
+                        else if (utf16_code_unit >= 0xD800 && utf16_code_unit <= 0xDBFF)
                         {
-                            high_surrogate = code_unit;
+                            // This code unit is a high surrogate. Store it and wait for the low
+                            // surrogate that should immediately follow.
+                            high_surrogate = utf16_code_unit;
                         }
                         else
                         {
-                            write_utf8_char(context, utf16_to_utf8(code_unit, 0));
+                            // This code unit is not a high surrogate. Convert it into a Unicode
+                            // code point and then encode it as UTF-8.
+                            write_utf8_char(context, utf16_to_utf8(utf16_code_unit, 0));
                         }
                     }
                     catch (const encoding_error&)
@@ -784,7 +855,8 @@ void consume_quoted(Context& context, bool skip_opening_quote = false)
                         throw parse_error(context, parse_error::INVALID_UTF16_CHARACTER);
                     }
 
-                    utf16_seq_offset = 0;
+                    utf16_code_unit = 0;
+                    utf16_seq_count = 0;
 
                     state = CHARACTER;
                 }
@@ -797,11 +869,12 @@ void consume_quoted(Context& context, bool skip_opening_quote = false)
         }
     }
 
-    if (empty && !skip_opening_quote)
+    if (state == OPENING_QUOTE)
     {
         throw parse_error(context, parse_error::EXPECTED_OPENING_QUOTE);
     }
-    else if (state != CLOSED)
+
+    if (state != CLOSED)
     {
         throw parse_error(context, parse_error::EXPECTED_CLOSING_QUOTE);
     }

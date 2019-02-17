@@ -496,9 +496,6 @@ TEST(minijson_reader_detail, parse_long)
     ASSERT_EQ(-42, minijson::detail::parse_long("-42"));
     ASSERT_EQ(42, minijson::detail::parse_long("+42"));
     ASSERT_EQ(42, minijson::detail::parse_long("042"));
-    ASSERT_EQ(255, minijson::detail::parse_long("ff", 16));
-    ASSERT_EQ(255, minijson::detail::parse_long("0xff", 16));
-    ASSERT_EQ(255, minijson::detail::parse_long("0ff", 16));
 
     char buf[64];
 
@@ -588,26 +585,6 @@ TEST(minijson_reader_detail, parse_double_invalid_restore_errno)
     ASSERT_EQ(42, errno);
 }
 
-TEST(minijson_reader_detail, parse_utf16_escape_sequence)
-{
-    ASSERT_EQ(0x0000u, minijson::detail::parse_utf16_escape_sequence("0000"));
-    ASSERT_EQ(0x0001u, minijson::detail::parse_utf16_escape_sequence("0001"));
-    ASSERT_EQ(0xA6BCu, minijson::detail::parse_utf16_escape_sequence("A6BC"));
-    ASSERT_EQ(0xFFFEu, minijson::detail::parse_utf16_escape_sequence("FFFE"));
-    ASSERT_EQ(0xFFFFu, minijson::detail::parse_utf16_escape_sequence("FFFF"));
-    ASSERT_EQ(0xFFFEu, minijson::detail::parse_utf16_escape_sequence("fffe"));
-    ASSERT_EQ(0xFFFFu, minijson::detail::parse_utf16_escape_sequence("ffff"));
-    ASSERT_EQ(0xFFFFu, minijson::detail::parse_utf16_escape_sequence("ffFf"));
-}
-
-TEST(minijson_reader_detail, parse_utf16_escape_sequence_invalid)
-{
-    ASSERT_THROW(minijson::detail::parse_utf16_escape_sequence("ffFp"), minijson::detail::encoding_error);
-    ASSERT_THROW(minijson::detail::parse_utf16_escape_sequence("-bcd"), minijson::detail::encoding_error);
-    ASSERT_THROW(minijson::detail::parse_utf16_escape_sequence(" abc"), minijson::detail::encoding_error);
-    ASSERT_THROW(minijson::detail::parse_utf16_escape_sequence("abc "), minijson::detail::encoding_error);
-}
-
 static void test_write_utf8_char(minijson::detail::utf8_char c, const char* expected_str)
 {
     char buf[] = "____";
@@ -673,10 +650,10 @@ TEST(minijson_reader_detail, consume_quoted_escape_sequences)
 
 TEST(minijson_reader_detail, consume_quoted_escape_sequences_utf16)
 {
-    char buffer[] = "\"\\u0001\\u0002a\\ud7ff\\uE000\\uFffFb\\u4F60\\uD800\\uDC00\\uDBFF\\uDFFFà\"";
+    char buffer[] = "\"\\u0001\\u0002a\\ud7ff\\uE000\\uFffFb\\u4F60\\uD800\\uDC00\\uDBFF\\uDFFF\\uD834\\uDD1Eà\"";
     minijson::buffer_context buffer_context(buffer, sizeof(buffer));
     minijson::detail::consume_quoted(buffer_context);
-    ASSERT_STREQ("\x01\x02" "a" "\xED\x9F\xBF\xEE\x80\x80\xEF\xBF\xBF" "b" "你" "\xF0\x90\x80\x80" "\xF4\x8F\xBF\xBF" "à",
+    ASSERT_STREQ("\x01\x02" "a" "\xED\x9F\xBF\xEE\x80\x80\xEF\xBF\xBF" "b" "你" "\xF0\x90\x80\x80" "\xF4\x8F\xBF\xBF" "𝄞" "à",
         buffer_context.write_buffer());
 }
 
@@ -720,16 +697,19 @@ void consume_quoted_invalid_helper(
 
 TEST(minijson_reader_detail, consume_quoted_invalid)
 {
-    consume_quoted_invalid_helper("",                   minijson::parse_error::EXPECTED_OPENING_QUOTE,       0,  "Expected opening quote");
-    consume_quoted_invalid_helper("a",                  minijson::parse_error::EXPECTED_OPENING_QUOTE,       0,  "Expected opening quote");
-    consume_quoted_invalid_helper("\"",                 minijson::parse_error::EXPECTED_CLOSING_QUOTE,       0,  "Expected closing quote");
-    consume_quoted_invalid_helper("\"asd",              minijson::parse_error::EXPECTED_CLOSING_QUOTE,       3,  "Expected closing quote");
-    consume_quoted_invalid_helper("\"\\h\"",            minijson::parse_error::INVALID_ESCAPE_SEQUENCE,      2,  "Invalid escape sequence");
-    consume_quoted_invalid_helper("\"\\u0rff\"",        minijson::parse_error::INVALID_UTF16_CHARACTER,      6,  "Invalid UTF-16 character");
-    consume_quoted_invalid_helper("\"\\uD800\\uD7FF\"", minijson::parse_error::INVALID_UTF16_CHARACTER,      12, "Invalid UTF-16 character");
-    consume_quoted_invalid_helper("\"\\uDC00\"",        minijson::parse_error::INVALID_UTF16_CHARACTER,      6,  "Invalid UTF-16 character");
-    consume_quoted_invalid_helper("\"\\uD800\"",        minijson::parse_error::EXPECTED_UTF16_LOW_SURROGATE, 7,  "Expected UTF-16 low surrogate");
-    consume_quoted_invalid_helper("\"\\uD800a\"",       minijson::parse_error::EXPECTED_UTF16_LOW_SURROGATE, 7,  "Expected UTF-16 low surrogate");
+    consume_quoted_invalid_helper("",                      minijson::parse_error::EXPECTED_OPENING_QUOTE,       0,  "Expected opening quote");
+    consume_quoted_invalid_helper("a",                     minijson::parse_error::EXPECTED_OPENING_QUOTE,       0,  "Expected opening quote");
+    consume_quoted_invalid_helper("\"",                    minijson::parse_error::EXPECTED_CLOSING_QUOTE,       0,  "Expected closing quote");
+    consume_quoted_invalid_helper("\"asd",                 minijson::parse_error::EXPECTED_CLOSING_QUOTE,       3,  "Expected closing quote");
+    consume_quoted_invalid_helper("\"\\h\"",               minijson::parse_error::INVALID_ESCAPE_SEQUENCE,      2,  "Invalid escape sequence");
+    consume_quoted_invalid_helper("\"\\u0rff\"",           minijson::parse_error::INVALID_ESCAPE_SEQUENCE,      4,  "Invalid escape sequence");
+    consume_quoted_invalid_helper("\"\\uD800\\uD7FF\"",    minijson::parse_error::INVALID_UTF16_CHARACTER,      12, "Invalid UTF-16 character");
+    consume_quoted_invalid_helper("\"\\uDC00\"",           minijson::parse_error::INVALID_UTF16_CHARACTER,      6,  "Invalid UTF-16 character");
+    consume_quoted_invalid_helper("\"\\uD800\"",           minijson::parse_error::EXPECTED_UTF16_LOW_SURROGATE, 7,  "Expected UTF-16 low surrogate");
+    consume_quoted_invalid_helper("\"\\uD800a\"",          minijson::parse_error::EXPECTED_UTF16_LOW_SURROGATE, 7,  "Expected UTF-16 low surrogate");
+    consume_quoted_invalid_helper("\"\\uD834\\r\\uDD1E\"", minijson::parse_error::EXPECTED_UTF16_LOW_SURROGATE, 8,  "Expected UTF-16 low surrogate");
+    consume_quoted_invalid_helper("\"\\uD83\"",            minijson::parse_error::INVALID_ESCAPE_SEQUENCE,      6,  "Invalid escape sequence");
+    consume_quoted_invalid_helper("\"\\uD83",              minijson::parse_error::EXPECTED_CLOSING_QUOTE,       5,  "Expected closing quote");
 }
 
 template<size_t Length>
@@ -1897,9 +1877,9 @@ TEST(minijson_reader, parse_object_invalid)
     parse_object_invalid_helper("{\"x\":0x1273}",            minijson::parse_error::INVALID_VALUE);
     parse_object_invalid_helper("{\"x\":NaN}",               minijson::parse_error::INVALID_VALUE);
     parse_object_invalid_helper("{\"x\":nuxl}",              minijson::parse_error::INVALID_VALUE);
-    parse_object_invalid_helper("{\"\\ufffx\":null}",        minijson::parse_error::INVALID_UTF16_CHARACTER);
-    parse_object_invalid_helper("{\"x\":\"\\ufffx\"}",       minijson::parse_error::INVALID_UTF16_CHARACTER);
-    parse_object_invalid_helper("{\"\\u\":\"\"}",            minijson::parse_error::INVALID_UTF16_CHARACTER);
+    parse_object_invalid_helper("{\"\\ufffx\":null}",        minijson::parse_error::INVALID_ESCAPE_SEQUENCE);
+    parse_object_invalid_helper("{\"x\":\"\\ufffx\"}",       minijson::parse_error::INVALID_ESCAPE_SEQUENCE);
+    parse_object_invalid_helper("{\"\\u\":\"\"}",            minijson::parse_error::INVALID_ESCAPE_SEQUENCE);
     parse_object_invalid_helper("{\"\\ud800\":null}",        minijson::parse_error::EXPECTED_UTF16_LOW_SURROGATE);
     parse_object_invalid_helper("{\"\\udc00\":null}",        minijson::parse_error::INVALID_UTF16_CHARACTER);
     parse_object_invalid_helper("{\"\\ud800\\uee00\":null}", minijson::parse_error::INVALID_UTF16_CHARACTER);
@@ -1919,8 +1899,8 @@ TEST(minijson_reader, parse_array_invalid)
     parse_array_invalid_helper("[0x1273]",             minijson::parse_error::INVALID_VALUE);
     parse_array_invalid_helper("[NaN]",                minijson::parse_error::INVALID_VALUE);
     parse_array_invalid_helper("[nuxl]",               minijson::parse_error::INVALID_VALUE);
-    parse_array_invalid_helper("[\"\\ufffx\"]",        minijson::parse_error::INVALID_UTF16_CHARACTER);
-    parse_array_invalid_helper("[\"\\ufff\"]",         minijson::parse_error::INVALID_UTF16_CHARACTER);
+    parse_array_invalid_helper("[\"\\ufffx\"]",        minijson::parse_error::INVALID_ESCAPE_SEQUENCE);
+    parse_array_invalid_helper("[\"\\ufff\"]",         minijson::parse_error::INVALID_ESCAPE_SEQUENCE);
     parse_array_invalid_helper("[\"\\ud800\"]",        minijson::parse_error::EXPECTED_UTF16_LOW_SURROGATE);
     parse_array_invalid_helper("[\"\\udc00\"]",        minijson::parse_error::INVALID_UTF16_CHARACTER);
     parse_array_invalid_helper("[\"\\ud800\\uee00\"]", minijson::parse_error::INVALID_UTF16_CHARACTER);
