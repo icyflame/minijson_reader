@@ -59,11 +59,6 @@ void handle_value(minijson::const_buffer_context &ctx, minijson::value &v) {
 void handle_array(minijson::const_buffer_context &ctx) {
     int index = 0;
     minijson::parse_array(ctx, [&](minijson::value v) {
-            std::cout << "Array[" << index << "]" << std::endl;
-            std::cout << ctx.read_offset() << std::endl;
-            std::cout << ctx.length() << std::endl;
-            std::cout << "Type: " << v.type() << std::endl;
-
             current_path.push_back(std::to_string(index));
             handle_value(ctx, v);
 
@@ -72,13 +67,7 @@ void handle_array(minijson::const_buffer_context &ctx) {
 }
 
 void handle_object(minijson::const_buffer_context &ctx) {
-    std::cout << "Object" << std::endl;
     minijson::parse_object(ctx, [&](const char *k, minijson::value v) {
-            std::cout << "Key = " << k << std::endl;
-            std::cout << ctx.read_offset() << std::endl;
-            std::cout << ctx.length() << std::endl;
-            std::cout << v.type() << std::endl;
-
             current_path.push_back(std::string(k));
             handle_value(ctx, v);
             });
