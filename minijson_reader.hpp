@@ -747,15 +747,37 @@ char read_unquoted_value(Context& context, char first_char = 0)
 
 } // namespace detail
 
-enum value_type
+class value_type_string MJR_FINAL
 {
-    String,
-    Number,
-    Boolean,
-    Object,
-    Array,
-    Null
+    private:
+        value_type m_type;
+
+    public:
+        explicit value_type_string(value_type type = Null)
+        {
+            m_type = type;
+        }
+
+        std::string to_string() {
+            switch (m_type) {
+                case String:
+                    return "string";
+                case Number:
+                    return "number";
+                case Boolean:
+                    return "boolean";
+                case Object:
+                    return "object";
+                case Array:
+                    return "array";
+                case Null:
+                    return "null";
+                default:
+                    return "invalid type";
+            }
+        }
 };
+
 
 class value MJR_FINAL
 {
