@@ -149,6 +149,11 @@ public:
         return m_read_offset;
     }
 
+    size_t length() const
+    {
+        return m_length;
+    }
+
     void new_write_buffer()
     {
         m_current_write_buffer = m_write_buffer + m_write_offset;
