@@ -38,6 +38,16 @@
 namespace minijson
 {
 
+enum value_type
+{
+    String,
+    Number,
+    Boolean,
+    Object,
+    Array,
+    Null
+};
+
 namespace detail
 {
 
@@ -133,6 +143,29 @@ protected:
     }
 
 public:
+
+    value_type toplevel_type()
+    {
+        if (strlen(m_read_buffer) == 0) {
+            return Null;
+        }
+
+        int i;
+        for (i = 0; i < m_length; i++) {
+            if (!isspace(m_read_buffer[i])) {
+                break;
+            }
+        }
+
+        switch (m_read_buffer[i]) {
+            case '[':
+                return Array;
+            case '{':
+                return Object;
+            default:
+                return Null;
+        }
+    }
 
     char read()
     {
