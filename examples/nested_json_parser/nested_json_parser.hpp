@@ -7,45 +7,13 @@
 
 namespace nested_json_parser {
   class nested_json_parser {
-    private:
+    protected:
       const char* m_json_string;
       int m_length;
       std::vector<std::string> m_current_path;
 
-    public:
-      explicit nested_json_parser(const char* json_string, int length) :
-        m_json_string(json_string),
-        m_length(length) {
-        }
-
-      void start() {
-        minijson::const_buffer_context ctx(m_json_string, m_length);
-
-        std::cout << "BEGIN" << std::endl;
-
-        switch (ctx.toplevel_type()) {
-          case minijson::Array:
-            m_current_path.push_back(".");
-            handle_array(ctx);
-            m_current_path.pop_back();
-            break;
-          case minijson::Object:
-            m_current_path.push_back("");
-            handle_object(ctx);
-            m_current_path.pop_back();
-            break;
-          default:
-            throw std::runtime_error("Invalid JSON");
-        }
-
-        if (m_current_path.size() != 0) {
-          std::cout << "Final size is not 0 => something went wrong" << std::endl;
-        }
-
-        std::cout << "END" << std::endl;
-      }
-
-      void handle_value(minijson::const_buffer_context &ctx, minijson::value &v) {
+    protected:
+      virtual void handle_value(minijson::const_buffer_context &ctx, minijson::value &v) {
         switch (v.type()) {
           case minijson::String:
           case minijson::Number:
@@ -100,6 +68,39 @@ namespace nested_json_parser {
 
         output += arr[arr.size()-1];
         return output;
+      }
+
+    public:
+      explicit nested_json_parser(const char* json_string, int length) :
+        m_json_string(json_string),
+        m_length(length) {
+        }
+
+      void start() {
+        minijson::const_buffer_context ctx(m_json_string, m_length);
+
+        std::cout << "BEGIN" << std::endl;
+
+        switch (ctx.toplevel_type()) {
+          case minijson::Array:
+            m_current_path.push_back(".");
+            handle_array(ctx);
+            m_current_path.pop_back();
+            break;
+          case minijson::Object:
+            m_current_path.push_back("");
+            handle_object(ctx);
+            m_current_path.pop_back();
+            break;
+          default:
+            throw std::runtime_error("Invalid JSON");
+        }
+
+        if (m_current_path.size() != 0) {
+          std::cout << "Final size is not 0 => something went wrong" << std::endl;
+        }
+
+        std::cout << "END" << std::endl;
       }
   }; // class nested_json_parser
 } // namespace nested_json_parser
