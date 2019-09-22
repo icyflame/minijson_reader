@@ -22,14 +22,13 @@ int main(int argc, char* argv[]) {
 
     // Initiate the JSON parsing buffer
     minijson::const_buffer_context ctx(json_obj, strlen(json_obj) - 1);
-
     current_path.push_back("root");
 
-    switch (json_obj[0]) {
-        case '[':
+    switch (ctx.toplevel_type()) {
+        case minijson::Array:
             handle_array(ctx);
             break;
-        case '{':
+        case minijson::Object:
             handle_object(ctx);
             break;
         default:
@@ -74,7 +73,13 @@ void handle_object(minijson::const_buffer_context &ctx) {
 }
 
 void handle_final(minijson::const_buffer_context &ctx, minijson::value &v) {
-    std::cout << join(current_path, " > ") << " = " << v.as_string() << std::endl;
+    std::cout << join(current_path, " > ")
+        << " = "
+        << v.as_string()
+        << " ("
+        << minijson::value_type_string(v.type()).to_string()
+        << ")"
+        << std::endl;
     current_path.pop_back();
 }
 
