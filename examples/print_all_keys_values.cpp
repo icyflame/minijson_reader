@@ -1,68 +1,18 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include "minijson_reader.hpp"
-
-int wantOffset = 23;
 
 void handle_array(minijson::const_buffer_context &ctx);
 void handle_object(minijson::const_buffer_context &ctx);
 void handle_final(minijson::const_buffer_context &ctx, minijson::value &v);
+void handle_value(minijson::const_buffer_context &ctx, minijson::value &v);
+std::string join(std::vector<std::string> arr, std::string joining_string);
 
-void handle_array(minijson::const_buffer_context &ctx) {
-    std::cout << "Array" << std::endl;
-    int index = 0;
-    minijson::parse_array(ctx, [&](minijson::value v) {
-            std::cout << "Array[" << index << "]" << std::endl;
-            std::cout << ctx.read_offset() << std::endl;
-            std::cout << ctx.length() << std::endl;
-            std::cout << "Type: " << v.type() << std::endl;
-            switch (v.type()) {
-            case minijson::String:
-            case minijson::Number:
-            case minijson::Boolean:
-            case minijson::Null:
-            handle_final(ctx, v);
-            break;
-            case minijson::Object:
-            handle_object(ctx);
-            break;
-            case minijson::Array:
-            handle_array(ctx);
-            break;
-            }
-            index++;
-    });
-}
-
-void handle_object(minijson::const_buffer_context &ctx) {
-    std::cout << "Object" << std::endl;
-    minijson::parse_object(ctx, [&](const char *k, minijson::value v) {
-            std::cout << "Key = " << k << std::endl;
-            std::cout << ctx.read_offset() << std::endl;
-            std::cout << ctx.length() << std::endl;
-            std::cout << v.type() << std::endl;
-            switch (v.type()) {
-            case minijson::String:
-            case minijson::Number:
-            case minijson::Boolean:
-            case minijson::Null:
-            handle_final(ctx, v);
-            break;
-            case minijson::Object:
-            handle_object(ctx);
-            break;
-            case minijson::Array:
-            handle_array(ctx);
-            break;
-            }
-            });
-}
-
-void handle_final(minijson::const_buffer_context &ctx, minijson::value &v) {
-    std::cout << "FINAL " << v.as_string() << " at " << "Nesting level " << ctx.nesting_level() << std::endl;
-}
+// Required global variables
+std::vector<std::string> current_path;
 
 int main(int argc, char* argv[]) {
     // Read from a file
@@ -72,6 +22,8 @@ int main(int argc, char* argv[]) {
 
     // Initiate the JSON parsing buffer
     minijson::const_buffer_context ctx(json_obj, strlen(json_obj) - 1);
+
+    current_path.push_back("root");
 
     switch (json_obj[0]) {
         case '[':
@@ -85,4 +37,65 @@ int main(int argc, char* argv[]) {
     }
 
     return 0;
+}
+
+void handle_value(minijson::const_buffer_context &ctx, minijson::value &v) {
+    switch (v.type()) {
+        case minijson::String:
+        case minijson::Number:
+        case minijson::Boolean:
+        case minijson::Null:
+            handle_final(ctx, v);
+            break;
+        case minijson::Object:
+            handle_object(ctx);
+            break;
+        case minijson::Array:
+            handle_array(ctx);
+            break;
+    }
+}
+
+void handle_array(minijson::const_buffer_context &ctx) {
+    int index = 0;
+    minijson::parse_array(ctx, [&](minijson::value v) {
+            std::cout << "Array[" << index << "]" << std::endl;
+            std::cout << ctx.read_offset() << std::endl;
+            std::cout << ctx.length() << std::endl;
+            std::cout << "Type: " << v.type() << std::endl;
+
+            current_path.push_back(std::to_string(index));
+            handle_value(ctx, v);
+
+            index++;
+            });
+}
+
+void handle_object(minijson::const_buffer_context &ctx) {
+    std::cout << "Object" << std::endl;
+    minijson::parse_object(ctx, [&](const char *k, minijson::value v) {
+            std::cout << "Key = " << k << std::endl;
+            std::cout << ctx.read_offset() << std::endl;
+            std::cout << ctx.length() << std::endl;
+            std::cout << v.type() << std::endl;
+
+            current_path.push_back(std::string(k));
+            handle_value(ctx, v);
+            });
+}
+
+void handle_final(minijson::const_buffer_context &ctx, minijson::value &v) {
+    std::cout << join(current_path, " > ") << " = " << v.as_string() << std::endl;
+    current_path.pop_back();
+}
+
+std::string join(std::vector<std::string> arr, std::string joining_string) {
+    std::string output;
+    for (int i = 0; i < (arr.size()-1); i++) {
+        output += arr[i];
+        output += joining_string;
+    }
+
+    output += arr[arr.size()-1];
+    return output;
 }
