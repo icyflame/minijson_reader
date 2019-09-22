@@ -22,11 +22,11 @@ $ cat basic.json
 }
 
 $ ./print basic.json
-root > k1 = a
-root > k2 = 2
-root > k3 = true
-root > k4 > 0 = a
-root > k4 > 1 = b
-root > k4 > k5 > u = z
-root > k4 > k5 > p = q
+root > k1 = a (string)
+root > k2 = 2 (number)
+root > k3 = true (boolean)
+root > k4 > 0 = a (string)
+root > k4 > 1 = b (string)
+root > k4 > k5 > u = z (string)
+root > k4 > k5 > p = q (string)
 ```
