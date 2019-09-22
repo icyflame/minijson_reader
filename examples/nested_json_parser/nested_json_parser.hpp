@@ -20,18 +20,29 @@ namespace nested_json_parser {
 
             void start() {
                 minijson::const_buffer_context ctx(m_json_string, m_length);
-                m_current_path.push_back("");
+
+                std::cout << "BEGIN" << std::endl;
 
                 switch (ctx.toplevel_type()) {
                     case minijson::Array:
+                        m_current_path.push_back(".");
                         handle_array(ctx);
+                        m_current_path.pop_back();
                         break;
                     case minijson::Object:
+                        m_current_path.push_back("");
                         handle_object(ctx);
+                        m_current_path.pop_back();
                         break;
                     default:
                         throw std::runtime_error("Invalid JSON");
                 }
+
+                if (m_current_path.size() != 0) {
+                    std::cout << "Final size is not 0 => something went wrong" << std::endl;
+                }
+
+                std::cout << "END" << std::endl;
             }
 
             void handle_value(minijson::const_buffer_context &ctx, minijson::value &v) {
@@ -56,28 +67,28 @@ namespace nested_json_parser {
                 minijson::parse_array(ctx, [&](minijson::value v) {
                         m_current_path.push_back("[" + std::to_string(index) + "]");
                         handle_value(ctx, v);
+                        m_current_path.pop_back();
 
                         index++;
                         });
-                m_current_path.pop_back();
             }
 
             void handle_object(minijson::const_buffer_context &ctx) {
                 minijson::parse_object(ctx, [&](const char *k, minijson::value v) {
-                        m_current_path.push_back(std::string(k));
+                        m_current_path.push_back("." + std::string(k));
                         handle_value(ctx, v);
+                        m_current_path.pop_back();
                         });
             }
 
             void handle_final(minijson::const_buffer_context &ctx, minijson::value &v) {
-                std::cout << join(m_current_path, ".")
+                std::cout << join(m_current_path, "")
                     << " = "
                     << v.as_string()
                     << " ("
                     << minijson::value_type_string(v.type()).to_string()
                     << ")"
                     << std::endl;
-                m_current_path.pop_back();
             }
 
             std::string join(std::vector<std::string> arr, std::string joining_string) {
