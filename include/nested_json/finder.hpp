@@ -7,7 +7,7 @@
 #include "parser.hpp"
 
 namespace nested_json {
-  class finder : public nested_json::parser {
+  class finder : public parser {
     protected:
       int m_want_offset;
       std::string m_want_path;
@@ -24,15 +24,16 @@ namespace nested_json {
 
       void handle_value(minijson::const_buffer_context &ctx, minijson::value &v) override {
         if (ctx.read_offset() >= m_want_offset && m_want_path == "") {
-          m_want_path = nested_json::nested_json::join(m_current_path, "");
+          m_want_path = parser::join(m_current_path, "");
+          minijson::ignore(ctx);
           return;
         }
 
-        nested_json::nested_json::handle_value(ctx, v);
+        parser::handle_value(ctx, v);
       }
 
       std::string start() {
-        nested_json::nested_json::start();
+        parser::start();
         return m_want_path;
       }
 
