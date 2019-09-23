@@ -1,5 +1,5 @@
 #include <fstream>
-#include "finder.hpp"
+#include "nested_json/finder.hpp"
 
 int main(int argc, char* argv[]) {
     // Read from a file

@@ -1,5 +1,5 @@
 #include <fstream>
-#include "parser.hpp"
+#include "nested_json/parser.hpp"
 
 int main(int argc, char* argv[]) {
   // Read from a file
